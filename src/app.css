@@ -1,0 +1,31 @@
+/* Dark by default: medical images read best on a dark surround. */
+:root {
+  --bg: #111216;
+  --panel: #17181d;
+  --border: #2a2c35;
+  --hover: #23252d;
+  --text: #b4b8c2;
+  --text-h: #f2f3f5;
+  --muted: #6f7480;
+  --accent: #6aa8ff;
+  --accent-bg: rgba(106, 168, 255, 0.14);
+  --accent-border: rgba(106, 168, 255, 0.55);
+  --error: #ff7b72;
+
+  color-scheme: dark;
+  font: 14px/1.4 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.95em;
+}
