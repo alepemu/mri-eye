@@ -67,12 +67,16 @@
       <button class:active={sliceType === v.type} onclick={() => (sliceType = v.type)}>{v.label}</button>
     {/each}
   </div>
-  <select bind:value={colormap} aria-label="Colormap">
-    {#each colormaps as cm (cm)}<option value={cm}>{cm}</option>{/each}
-  </select>
+  <div class="select">
+    <select bind:value={colormap} aria-label="Colormap">
+      {#each colormaps as cm (cm)}<option value={cm}>{cm}</option>{/each}
+    </select>
+    <span class="chevron" aria-hidden="true"></span>
+  </div>
   <div class="menu" bind:this={menu}>
     <button class:active={menuOpen} aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>
-      Contrast{#if adjusted}<span class="dot" title="Adjusted"></span>{/if} ▾
+      Contrast{#if adjusted}<span class="dot" title="Adjusted"></span>{/if}<span class="chevron" aria-hidden="true"
+      ></span>
     </button>
     {#if menuOpen}
       <div class="panel">
@@ -153,8 +157,37 @@
     cursor: pointer;
   }
   button:hover,
+  select:hover,
   .button:hover {
     background: var(--hover);
+  }
+  /* one chevron for every dropdown: drawn in the text colour, replacing the native select arrow */
+  .chevron {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 8px;
+    vertical-align: -1px;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5l3 3 3-3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+  .select {
+    position: relative;
+    display: flex;
+    color: var(--text);
+  }
+  .select select {
+    appearance: none;
+    padding-right: 28px;
+  }
+  .select .chevron {
+    position: absolute;
+    right: 11px; /* 10px padding + 1px border, same as the button chevrons */
+    top: 50%;
+    margin: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
   }
   button.active {
     background: var(--accent-bg);
