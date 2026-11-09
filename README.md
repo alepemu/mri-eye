@@ -2,6 +2,8 @@
 
 A simple, fast MRI viewer that runs in your browser. Open a hospital CD export (DICOM) or NIfTI files, pick a series and scroll through it. Everything stays on your machine. Nothing is uploaded.
 
+![mri-eye: browsing a shoulder MRI series by series](docs/mri-eye-preview.gif)
+
 Stack: Vite + Svelte 5 + TypeScript (pnpm), with [NiiVue](https://github.com/niivue/niivue) (WebGL2) for rendering. DICOM is converted in the browser by [dcm2niix](https://github.com/rordenlab/dcm2niix) running as WebAssembly.
 
 ## Run
