@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// Import a hospital CD export into footage/<study>/<NN_SeriesDescription>/*.dcm.
+// Import a hospital CD / Idonia export into footage/<group>/<exam>/<NN_SeriesDescription>/*.dcm.
 // Only DICOM files with pixel data are kept; bundled viewers, DICOMDIR, dose/structured
 // reports, autorun etc. are ignored.
 //
-// Usage: node scripts/import-cd.mjs <cd-folder> [--out footage] [--name <study>] [--move]
-//   --move  delete the source CD folder after a verified import (in-place cleanup works too)
+// Usage: node scripts/import-cd.mjs <cd-folder> [--out footage] [--name <group>/<exam>] [--move]
+//   --name  defaults to the study date and an exam label from the modality, e.g. 2026-04-15/MRI;
+//           override it with any names, e.g. "2026-08-26 (MR Arthro)/MR arthrography"
+//   --move  delete the source folder after a verified import (in-place re-imports do this too)
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +14,7 @@ import path from 'node:path';
 const LONG_VRS = new Set(['OB', 'OD', 'OF', 'OL', 'OV', 'OW', 'SQ', 'UC', 'UN', 'UR', 'UT', 'SV', 'UV']);
 const WANT = {
   '00080018': 'SOPInstanceUID',
+  '00080020': 'StudyDate',
   '00080060': 'Modality',
   '0008103e': 'SeriesDescription',
   '0020000e': 'SeriesInstanceUID',
@@ -88,6 +91,23 @@ function* walkFiles(dir) {
 
 const sanitize = (s) => s.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
+const EXAM_LABELS = { MR: 'MRI', DX: 'XRAY', CR: 'XRAY', XA: 'Fluoroscopy', RF: 'Fluoroscopy', CT: 'CT', US: 'Ultrasound' };
+
+// "<YYYY-MM-DD>/<exam>" from the study date and the most common modality among the images
+function defaultName(headers) {
+  const count = (key) => {
+    const n = new Map();
+    for (const h of headers) if (h[key]) n.set(h[key], (n.get(h[key]) ?? 0) + 1);
+    return [...n.entries()].sort((a, b) => b[1] - a[1]).map(([v]) => v);
+  };
+  const [date] = count('StudyDate');
+  const modalities = count('Modality');
+  if (modalities.length > 1) console.warn(`  mixed modalities ${modalities.join(', ')}; naming after ${modalities[0]}`);
+  const day = /^\d{8}$/.test(date ?? '') ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : 'undated';
+  const exam = EXAM_LABELS[modalities[0]] ?? (modalities[0] || 'Study');
+  return `${day}/${exam}`;
+}
+
 function parseArgs(argv) {
   const args = { out: 'footage', move: false };
   const rest = [];
@@ -98,24 +118,19 @@ function parseArgs(argv) {
     else rest.push(argv[i]);
   }
   if (rest.length !== 1) {
-    console.error('Usage: node scripts/import-cd.mjs <cd-folder> [--out footage] [--name <study>] [--move]');
+    console.error('Usage: node scripts/import-cd.mjs <cd-folder> [--out footage] [--name <group>/<exam>] [--move]');
     process.exit(1);
   }
   args.src = path.resolve(rest[0]);
-  args.name ??= path.basename(args.src);
   return args;
 }
 
 function main() {
-  const { src, out, name, move } = parseArgs(process.argv.slice(2));
-  const target = path.resolve(out, name);
-  const inPlace = target === src;
-  if (fs.existsSync(target) && !inPlace) throw new Error(`Target already exists: ${target}`);
-  const staging = path.resolve(out, `.${name}.importing`);
-  fs.rmSync(staging, { recursive: true, force: true });
+  const { src, out, name: nameArg, move } = parseArgs(process.argv.slice(2));
 
   // Collect images grouped by series.
   const series = new Map();
+  const headers = [];
   const seen = new Set();
   let scanned = 0;
   for (const file of walkFiles(src)) {
@@ -125,11 +140,24 @@ function main() {
     if (!h?.hasPixelData) continue; // DICOMDIR, structured/dose reports, etc.
     if (h.SOPInstanceUID && seen.has(h.SOPInstanceUID)) continue;
     seen.add(h.SOPInstanceUID);
+    headers.push(h);
     const key = h.SeriesInstanceUID || path.dirname(file);
     if (!series.has(key)) series.set(key, { header: h, files: [] });
     series.get(key).files.push(file);
   }
   if (series.size === 0) throw new Error(`No DICOM images found in ${src}`);
+
+  const name = nameArg ?? defaultName(headers);
+  const target = path.resolve(out, name);
+  const inPlace = target === src;
+  const removeSource = move || inPlace;
+  if (fs.existsSync(target) && !inPlace) throw new Error(`Target already exists: ${target} (pick another --name)`);
+  if (removeSource && target.startsWith(src + path.sep)) {
+    throw new Error(`Target ${target} is inside the source folder, which --move would delete`);
+  }
+  // staging sits next to the target so the final step is a same-folder rename
+  const staging = path.join(path.dirname(target), `.${path.basename(target)}.importing`);
+  fs.rmSync(staging, { recursive: true, force: true });
 
   // Copy into staging as NN_Description/, ordered by series number.
   const ordered = [...series.values()].sort(
@@ -154,9 +182,9 @@ function main() {
   if (copied !== total) throw new Error(`Copied ${copied} of ${total} images; source left untouched`);
   console.log(`${name}: ${total} images in ${ordered.length} series (scanned ${scanned} files)`);
 
-  if (move || inPlace) fs.rmSync(src, { recursive: true, force: true, maxRetries: 15, retryDelay: 300 });
+  if (removeSource) fs.rmSync(src, { recursive: true, force: true, maxRetries: 15, retryDelay: 300 });
   renameWithRetry(staging, target);
-  console.log(`-> ${target}${move || inPlace ? ' (source removed)' : ''}`);
+  console.log(`-> ${target}${removeSource ? ' (source removed)' : ''}`);
 }
 
 // Windows refuses renames while a folder is still being deleted or is watched/open elsewhere

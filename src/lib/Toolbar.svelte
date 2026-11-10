@@ -161,16 +161,9 @@
   .button:hover {
     background: var(--hover);
   }
-  /* one chevron for every dropdown: drawn in the text colour, replacing the native select arrow */
-  .chevron {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
+  /* the shared .chevron (app.css) also replaces the native select arrow */
+  button .chevron {
     margin-left: 8px;
-    vertical-align: -1px;
-    background: currentColor;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5l3 3 3-3' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-      center / contain no-repeat;
   }
   .select {
     position: relative;

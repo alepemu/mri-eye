@@ -13,21 +13,29 @@ pnpm install
 pnpm dev
 ```
 
-Studies in `footage/` show up in the sidebar automatically. You can also use **Open folder** / **Open files**, or drag a DICOM folder or `.nii` / `.nii.gz` file onto the viewer.
+Studies in `footage/` show up in the sidebar automatically, in collapsible groups (one per top-level folder, collapsed until you click them). You can also use **Open folder** / **Open files**, or drag a DICOM folder or `.nii` / `.nii.gz` file onto the viewer.
 
 ## Adding a CD
 
-Hospital CDs ship thousands of files (bundled Windows/Mac viewers) around a few hundred images. Import one so only the images are kept:
+Hospital CDs (and Idonia downloads) ship many extra files (bundled Windows/Mac viewers, dose reports) around the images. Import one so only the images are kept, sorted into a group and an exam:
+
+```
+footage/<group>/<exam>/<NN_SeriesDescription>/*.dcm      e.g. footage/2026-08-26 (MR Arthro)/MR arthrography/01_AX_T1_FS_DERECHO/
+```
 
 ```bash
-node scripts/import-cd.mjs "D:/"                       # copy CD -> footage/<name>/NN_SeriesDescription/*.dcm
-node scripts/import-cd.mjs footage/SOME_EXPORT --move   # clean up an export already copied into footage/
+node scripts/import-cd.mjs "D:/"                          # copy a CD in; named from the scans, e.g. 2026-04-15/MRI
+node scripts/import-cd.mjs footage/SOME_EXPORT --move      # sort an export already copied into footage/, then remove it
+node scripts/import-cd.mjs footage/SOME_EXPORT --move --name "2026-08-26 (MR Arthro)/MR arthrography"   # choose the names yourself
 ```
+
+By default the group is the study date and the exam is derived from the modality (MR → MRI, DX/CR → XRAY, XA/RF → Fluoroscopy, CT, US → Ultrasound). Use `--name "<group>/<exam>"` for anything else, like an arthrography. Groups can also be renamed by hand at any time; they're sorted alphabetically, so starting them with the date keeps them in time order.
 
 ## Controls
 
 | | |
 |---|---|
+| Sidebar | click a group to expand / collapse it, click a series to open it |
 | Scroll wheel / slice bar (right edge) | next / previous slice |
 | Left click / drag | move crosshair |
 | Toolbar → Contrast | brightness / contrast sliders, reset |
@@ -39,7 +47,7 @@ A series opens in the plane it was acquired in. Oblique shoulder or knee planes 
 
 ## Privacy
 
-`footage/` is gitignored because folder names and DICOM headers contain patient identifiers. Never commit scans. The `/api/studies` and `/footage/*` endpoints exist only on the local dev server and are not part of `pnpm build`.
+`footage/` is gitignored because DICOM headers (and the folder names of raw CD exports) contain patient identifiers. Never commit scans. The `/api/studies` and `/footage/*` endpoints exist only on the local dev server and are not part of `pnpm build`.
 
 ## Scripts
 
