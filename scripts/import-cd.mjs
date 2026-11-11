@@ -169,8 +169,11 @@ function main() {
     const dir = path.join(staging, `${String(i + 1).padStart(2, '0')}_${label}`);
     fs.mkdirSync(dir, { recursive: true });
     for (const file of s.files) {
-      let dest = path.join(dir, path.basename(file));
-      if (fs.existsSync(dest)) dest = path.join(dir, `${copied}_${path.basename(file)}`);
+      // CDs often use extensionless names ("00000001"); the viewer lists *.dcm only
+      const base = path.basename(file);
+      const fileName = base.toLowerCase().endsWith('.dcm') ? base : `${base}.dcm`;
+      let dest = path.join(dir, fileName);
+      if (fs.existsSync(dest)) dest = path.join(dir, `${copied}_${fileName}`);
       fs.copyFileSync(file, dest);
       if (fs.statSync(dest).size !== fs.statSync(file).size) throw new Error(`Size mismatch copying ${file}`);
       copied++;

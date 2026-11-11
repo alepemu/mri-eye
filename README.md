@@ -1,6 +1,6 @@
 # mri-eye
 
-A simple, fast MRI viewer that runs in your browser. Open a hospital CD export (DICOM) or NIfTI files, pick a series and scroll through it. Everything stays on your machine. Nothing is uploaded.
+A simple, fast MRI viewer that runs in your browser. Open a hospital CD export (DICOM), NIfTI files or plain X-ray pictures (PNG/JPEG), pick a series and scroll through it. Everything stays on your machine. Nothing is uploaded.
 
 ![mri-eye: browsing a shoulder MRI series by series](docs/mri-eye-preview.gif)
 
@@ -13,7 +13,7 @@ pnpm install
 pnpm dev
 ```
 
-Studies in `footage/` show up in the sidebar automatically, in collapsible groups (one per top-level folder, collapsed until you click them). You can also use **Open folder** / **Open files**, or drag a DICOM folder or `.nii` / `.nii.gz` file onto the viewer.
+Studies in `footage/` show up in the sidebar automatically, in collapsible groups (one per top-level folder, collapsed until you click them). You can also use **Open folder** / **Open files**, or drag a DICOM folder, `.nii` / `.nii.gz` file or picture (`.png`, `.jpg`, …) onto the viewer. Colour pictures are shown in grayscale so the contrast controls work on them.
 
 ## Adding a CD
 

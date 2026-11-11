@@ -61,7 +61,7 @@
     status = `Reading ${files.length} files…`
     try {
       const volumes = await toVolumes(files, (f) => (status = `Converting… ${Math.round(f * 100)}%`))
-      if (volumes.length === 0) throw new Error('No DICOM or NIfTI images found')
+      if (volumes.length === 0) throw new Error('No DICOM, NIfTI or picture files found')
       const id = `opened-${Date.now()}`
       const study: Study = {
         id,

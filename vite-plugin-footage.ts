@@ -1,8 +1,9 @@
 // Dev-only: exposes the local footage/ folder (laid out by scripts/import-cd.mjs) to the app.
 // Layout: footage/<group>/<exam>/<series>/*.dcm, or footage/<study>/<series>/*.dcm (ungrouped).
 // <group> can be any name; scripts/import-cd.mjs uses the study date (YYYY-MM-DD) by default.
+// A series folder may also hold plain pictures (.png/.jpg/...), shown as 2D images.
 //   GET /api/studies -> [{ id, name, group?, series: [{ id, name, files: [url...] }] }]
-//   GET /footage/... -> raw .dcm bytes
+//   GET /footage/... -> raw file bytes
 // Never part of a production build, so scans stay on this machine.
 
 import fs from 'node:fs'
@@ -32,10 +33,21 @@ const subdirs = (dir: string) =>
 // "03_COR_T1_FS_DERECHO" -> "COR T1 FS DERECHO"
 const seriesName = (dir: string) => dir.replace(/^\d+_/, '').replace(/_/g, ' ')
 
-const dicomFiles = (dir: string) =>
+const CONTENT_TYPES: Record<string, string> = {
+  '.dcm': 'application/dicom',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.bmp': 'image/bmp',
+  '.gif': 'image/gif',
+}
+const contentType = (file: string) => CONTENT_TYPES[path.extname(file).toLowerCase()]
+
+// viewable files in a series folder: DICOM or plain pictures (reports etc. are ignored)
+const imageFiles = (dir: string) =>
   fs
     .readdirSync(dir)
-    .filter((f) => f.toLowerCase().endsWith('.dcm'))
+    .filter((f) => contentType(f))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
 // segments: path of the study folder relative to root, e.g. ["2026-08-26", "MR arthrography"]
@@ -49,7 +61,7 @@ function readStudy(root: string, segments: string[], group?: string): FootageStu
       .map((series) => ({
         id: `${id}/${series}`,
         name: seriesName(series),
-        files: dicomFiles(path.join(root, ...segments, series)).map(
+        files: imageFiles(path.join(root, ...segments, series)).map(
           (f) => '/footage/' + [...segments, series, f].map(encodeURIComponent).join('/'),
         ),
       }))
@@ -63,7 +75,7 @@ function listStudies(root: string): FootageStudy[] {
     .flatMap((top) => {
       const children = subdirs(path.join(root, top))
       // series folders directly inside -> a study; otherwise a group of studies
-      const isStudy = children.some((c) => dicomFiles(path.join(root, top, c)).length > 0)
+      const isStudy = children.some((c) => imageFiles(path.join(root, top, c)).length > 0)
       return isStudy ? [readStudy(root, [top])] : children.map((exam) => readStudy(root, [top, exam], top))
     })
     .filter((s) => s.series.length > 0)
@@ -85,7 +97,7 @@ export default function footage(dir = 'footage'): Plugin {
         const rel = decodeURIComponent((req.url ?? '').split('?')[0])
         const file = path.resolve(root, '.' + rel)
         if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return next()
-        res.setHeader('Content-Type', 'application/dicom')
+        res.setHeader('Content-Type', contentType(file) ?? 'application/octet-stream')
         fs.createReadStream(file).pipe(res)
       })
     },

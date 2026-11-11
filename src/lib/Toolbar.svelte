@@ -115,7 +115,7 @@
   </label>
   <label class="button" class:disabled>
     Open files
-    <input type="file" multiple accept=".dcm,.nii,.gz,application/dicom" {disabled} onchange={picked} />
+    <input type="file" multiple accept=".dcm,.nii,.gz,.png,.jpg,.jpeg,.bmp,.gif,application/dicom" {disabled} onchange={picked} />
   </label>
 </header>
 
